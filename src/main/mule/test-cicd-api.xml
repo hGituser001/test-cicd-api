@@ -18,7 +18,8 @@ output application/json
 ---
 {
 	"status": 200,
-	"details": "CICD API Test Successful!! "
+	"details": "CICD API Test Successful!!",
+	version: "v2"
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
