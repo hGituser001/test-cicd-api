@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d404a05d-6e05-48fa-9ed6-c941d6e22ddb" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="557d6aa3-8293-44c0-8b32-2e872cca5305" />
 	<flow name="test-cicd-apiFlow" doc:id="ccb5a939-808f-4056-ad1e-a188b408bda3" >
-		<http:listener doc:name="Listener" doc:id="8d61eb23-df0c-49db-a340-738fe45e2da0" config-ref="HTTP_Listener_config" path="/cicdtest"/>
+		<http:listener doc:name="Harwinder" doc:id="8d61eb23-df0c-49db-a340-738fe45e2da0" config-ref="HTTP_Listener_config" path="/cicdtest"/>
 		<logger level="INFO" doc:name="Logger" doc:id="4520e94a-d12c-4e87-ac45-ad82570ce4e5" />
 		<ee:transform doc:name="Transform Message" doc:id="ce282fe6-7182-450f-bddd-fb113a075180" >
 			<ee:message >
@@ -23,5 +25,91 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+	</flow>
+	<flow name="test-cicd-apiFlow1" doc:id="9f16ad97-27f4-4413-84ff-8ff885289a0f" >
+		<scheduler doc:name="Scheduler" doc:id="420bd9f7-da6c-4550-ac9f-1f005ca02155" >
+			<scheduling-strategy >
+				<fixed-frequency startDelay="100" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<ee:transform doc:name="Transform Message" doc:id="59565a26-9c41-4210-b267-9f2391475801" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+[{
+	"customerNo": "10",
+	"name" : "Mr A",
+	"age": "25"
+},
+{
+	"customerNo": "11",
+	"name" : "Mr B",
+	"age": "25"
+},
+{
+	"customerNo": "12",
+	"name" : "Mr C",
+	"age": "25"
+}]
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="9cdbf124-7f54-4e6b-abb1-e50358bccbd5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv  
+---
+payload ]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="filename" ><![CDATA[%dw 2.0
+output application/java
+---
+"input_" ++ correlationId ++ ".csv"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="81f249ec-55c3-49b7-8c3b-6089e15b1254" config-ref="File_Config" path='#["C:\\cicd\\input\\" ++ vars.filename]'/>
+		<logger level="INFO" doc:name="Logger" doc:id="ada5c496-2e35-4c12-931c-94b4a8a00893" />
+	</flow>
+	<flow name="test-cicd-apiFlow2" doc:id="eb5f6920-44ce-4b9b-b2d3-21145a8b3626" >
+		<scheduler doc:name="Scheduler" doc:id="3c753b74-df84-4e46-84f0-b1f9b37fc759" >
+			<scheduling-strategy >
+				<fixed-frequency startDelay="100" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<file:list doc:name="List" doc:id="adf449ec-d022-4758-ae98-bba2cd639b03" config-ref="File_Config" directoryPath='#["C:\\cicd\\input\\"]'>
+			<file:matcher filenamePattern="*.csv" />
+		</file:list>
+		<foreach doc:name="For Each" doc:id="3fc0cfaa-55a1-4cb1-85ba-44a098744785" >
+			<file:read doc:name="Read" doc:id="fe76deb5-8c20-4b80-8798-f8e49df7333e" config-ref="File_Config" path='#[attributes.path]'/>
+			<ee:transform doc:name="Transform Message" doc:id="e3e9c397-772e-42ea-9b4d-0cd9fcebe169" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<ee:transform doc:name="Transform Message" doc:id="24e6f495-ea83-433d-84c7-9985f7095c90" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="inputPayloads" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.inputPayloads default [] ++ payload]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="dd69705a-0adf-4a90-81dd-959ccbbb0882" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.inputPayloads default []]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="5aaf2c24-0000-450e-bd77-101fa431b4ac" message="#[payload]"/>
 	</flow>
 </mule>
